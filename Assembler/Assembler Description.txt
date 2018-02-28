@@ -1,0 +1,13 @@
+This is a very simple assembler for the Uno computer. There is no support for
+macros or other extensions. As there is not yet a programmer for the Uno
+computer the primary use case is to output binary text in a format that can be
+easily toggled into the machine manually. It is written in python and can be
+ran as:
+
+python unoasm.py <inputfile>
+
+Or:
+
+python unoasm.py <inputfile> -o <outputfile>
+
+When ran without an output file name the output will go to stdout

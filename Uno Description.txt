@@ -1,0 +1,168 @@
+Specification:
+  - Harvard Architecture
+  - 256 bytes of program memory
+  - 8 1-bit I/O ports
+  - 500 Hz clock frequency
+  - 1 clock cycle per instruction
+
+Architecture:
+    The Uno is an extremely simple 1-bit computer system designed to be easy
+  to comstruct with components that were obtainable through the NMT EE
+  department. Its design was inspired by the motorola MC14500B but it has been
+  stripped down and simplified. The machine has 2 programmer accesible
+  registers, the first is the Result Register (RR) which holds the result of
+  the last load or arithmetic operation, and the other is the Output Enable
+  register (OEN) which emables output if it is set to 1 and disables output if
+  it is set to 0.
+    The machine uses the Harvard architecture and has separate Program memory
+  and I/O space (It is possible to map data memory to the I/O space). In order
+  to be as simple as possible the computer does not have any traditional
+  conditional jump capability. Instead, it continuously cycles through program
+  memory and uses the OEN register to enable and disable modification of the
+  Output state during select areas of the program (Note that instructions are 
+  still loaded and executed, the store instruction is simply disabled).  
+
+Instruction Set:
+    The machine has 4 instructions whose behavior can be modified via 2 sub-
+  instruction select bits that control a 4 input multiplexer. The 3 instructions
+  are NOP, LOAD, OEN, and STO which do nothing, load RR, enable/disable output,
+  and store RR respectively. Each machine instruction also includes the 3 bit
+  I/O address of the bit to be operated on.
+
+  Each 8-bit instruction has the following format:
+   ___ ___ ___   ___ ___   ___ ___ ___
+  |I3 |I2 |I1 | |O2 |O1 | |A3 |A2 |A1 |
+  |___|___|___| |___|___| |___|___|___|
+
+  The instruction field (I3 - I1) defines the instruction to perform. Valid
+  opcodes are as follows:
+
+    000 - NOP   - Does nothing (Memory is filled with this instruction when it
+                  is cleared as the machine always loops through all 256
+                  instructions each loop)
+    100 - LOAD  - Loads RR from the selected I/O address
+    010 - OEN   - Loads OEN from the selected I/O address
+    001 - STORE - Stores value of RR to the selected I/O address
+
+    Note: It may be possible to use a combination of opcodes at once (e.g. 110 
+    LOAD and OEN) but this is likely to cause a race condition or other 
+    undefined behavior.
+
+  The operation field (O2 & O1) provides a way of getting more out of the
+  sparse instruction set and provides the ability to do arithmetic. Operations
+  are as follows:
+
+    Values for NOP instruction:
+    NOP always does nothing
+
+    Values for LOAD instruction:
+    Value:    Mnemonic:   Operation:
+    00        LOAD       - Loads I/O to RR
+    01        LOAD NOT   - Loads ~I/O to RR
+    10        LOAD NAND  - Loads ~(I/O * RR) to RR
+    11        LOAD NOR   - Loads ~(I/O + RR) to RR
+
+    Values for OEN instruction:
+    Value:    Mnemonic:   Operation:
+    00        OEN        - Loads I/O to OEN
+    01        OEN NOT    - Loads ~I/O to OEN
+    10        OEN NAND   - Loads ~(I/O * RR) to OEN
+    11        OEN NOR    - Loads ~(I/O + RR) to OEN
+
+    Values for STORE instruction:
+    Value:    Mnemonic:   Operation:
+    00        STORE      - Stores RR to I/O
+    01        STORE NOT  - Stores ~RR to I/O
+    10        STORE      - Stores RR to I/O
+    11        STORE NOT  - Stores ~RR to I/O
+
+  The address field (A3 - A1) is probably the simplest field as it simply 
+  selects which of the 8 one bit I/O ports should be operated on (either read
+  or write depending on instruction) any value from 000 to 111 is valid.
+
+Operation:
+    As user input the machine has 12 front panel switches, a power switch, and
+  a reset switch. As output it has a power indicator LED and 10 front panel
+  indicator LEDs. The leftmost 8 switches allow input of 8 bits of data to the
+  memory or program counter while the rightmost 4 switches control data load,
+  memory / program counter select (for data input and display), single
+  step, and run / halt. The leftmost 8 LEDs display the currently selected
+  data while the right 2 display the status of the RR and OEN registers
+  respectively. See diagrams below:
+
+  Switches:
+     __ __ __ __ __ __ __ __ __ __ __ __
+    |  |  |  |  |  |  |  |  |  |  |  |  |
+    |D7|D6|D5|D4|D3|D2|D1|D0|LD|SL|SS|RH|
+    |__|__|__|__|__|__|__|__|__|__|__|__|
+
+    Data (D7 - D0)   - Data to be loaded to Memory or Program Counter (Up is
+                       data 1, Down is data 0)
+    Load (LD)        - Load Memory / Program counter (Switch Up to Load)        
+    Select (SL)      - Select whether to load / display Memory or the Program
+                       Counter (Down is Memory, Up is PC)
+    Single Step (SS) - Single steps the clock (Switch up to set clock high,
+                       then switch down to set clock low)
+    Run / Halt       - Controls whether machine is running or halted (Up is
+                       run, Down is Halt)
+
+  LEDs:
+
+     __ __ __ __ __ __ __ __ __ __
+    |  |  |  |  |  |  |  |  |  |  |
+    |D7|D6|D5|D4|D3|D2|D1|D0|RR|OE|
+    |__|__|__|__|__|__|__|__|__|__|
+
+    Data (D7 - D0)       - Data displayed from Memory or Program Counter
+                           (Whether Memory or Program Counter is displayed is
+                           determined by the Select switch)
+    Result Register (RR) - Displays the current state of the Result Register
+    Output Enable (OE)   - Displays the current state of the Output Enable
+                           Register
+
+  During normal operation the user will first power the
+  machine on and then reset it. At this point the machine will have an unknown
+  memory state and so the memory must be cleared. To clear the memory set the
+  data switches to 00000000 (All down) set the load switch high (Up) and set
+  the run / halt switch to run (Up). Now wait at least one full second then
+  set all switches low and press reset.
+
+  After memory clear and reset the machine is ready to be programmed. To
+  program the machine toggle the data to be loaded into memory onto the data
+  switches and load it with the load switch then set the select switch to the
+  program counter and load it with the address of the next instruction. Repeat
+  as necessary. If the data to be loaded is sequential (and you don't mind
+  getting the registers in a strange state) then you can toggle the Single
+  Step switch to increment the program counter between memory loads. This will
+  save you from loading an address for each instruction but note that the data
+  just loaded will be executed when the Single step switch is toggled.
+
+I/O connector:
+    The Uno has a 20 pin I/O connector to allow the user to interface it with
+  various external devices. The I/O connector pinout is graphically depicted
+  below:
+
+    G  O0 O1 O2 O3 O4 O5 O6 O7 R
+    o  o  o  o  o  o  o  o  o  o
+    o  o  o  o  o  o  o  o  o  o
+    +  I0 I1 I2 I3 I4 I5 I6 I7 C
+
+    Here G is ground , O0-7 are outputs 0-7, R is reset, + is +5V, I0-7 are 
+  inputs 0-7,and C is the system clock.
+
+Peripherals:
+    Peripherals can be interfaced to the I/O ports on the Uno. Currently the
+  only working peripheral is a simple I/O expander interface designed to
+  provide a reconfigurable way to allow users to interact with the I/O and a
+  way to add multiple expansion cards. The expansion card pinout is as follows:
+
+    +  I0 I1 I2 I3 S
+    o  o  o  o  o  o
+    o  o  o  o  o  o
+    R  O0 O1 O2 O3 G
+
+    Where + is +5V, I0-3 are inputs 0-3, S is card select (cards should only
+  pull up their outputs if this is high), R is reset, O0-3 are outputs 0-3,
+  and G is ground.
+    The I/O Expander as implemented supports 2 cards and can be set to select
+  card 1 or 2 or to select a card based on the state of Output 4.
