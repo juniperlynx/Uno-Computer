@@ -8,7 +8,7 @@ The Uno is a simple one bit computer loosely based on the instruction set of the
   - 500 Hz clock frequency
   - 1 clock cycle per instruction
 
-The computer does not use a jump instruction. Instead of jumping, the machine continouosly loops through the instruction memory, disabling and re-enabling output in different parts of the program.
+The computer does not use a jump instruction. Instead of jumping, the machine continuously loops through the instruction memory, disabling and re-enabling output in different parts of the program.
 
 You'll also notice that the spec list does not contain any data memory. However, it is possible to map a bit of memory to an I/O port by jumpering the input and output pins together.
 
